@@ -5,7 +5,12 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour
 {
     float h, v;
+    float moveSpeed = 5f;
     Rigidbody2D rb;
+    bool isHorizontalMove = false;
+    public Animator anim;
+    Vector3 vecDir;
+    GameObject obj;
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -13,14 +18,120 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        // GetAxisRaw´Â -1, 0, 1ÀÇ °ªÀ» ¹İÈ¯ÇÑ´Ù. GetAxis´Â -1°ú 1 »çÀÌÀÇ °ªÀ» ¹İÈ¯ÇÑ´Ù.
-        // µû¶ó¼­ ÇöÀç ¸¸µå´Â Âê²Ù¸£Çü½ÄÀÇ °ÔÀÓ¿¡¼­´Â ÇØ´ç ÇÔ¼ö°¡ ÀûÀıÇÏ´Ù.
+        // get axis ë°©í–¥í‚¤ì—ë”°ë¼ ì…ë ¥ê°’ì´ -1, 0, 1ë¡œ ë°›ìŒ
+        // ì¯”ê¾¸ë¥´í˜• ê²Œì„ì—ì„  ëŒ€ê°ì„  ì´ë™ì´ ì•ˆë˜ë„ë¡ í•˜ê¸° ìœ„í•´ì„œ ìˆ˜í‰ê³¼ ìˆ˜ì§ ì¤‘ í•˜ë‚˜ì˜ ì…ë ¥ë§Œ ë°›ë„ë¡ í•¨
         h = Input.GetAxisRaw("Horizontal");
         v = Input.GetAxisRaw("Vertical");
+
+        // ì…ë ¥ ìƒíƒœ
+        bool hDown = Input.GetButtonDown("Horizontal");
+        bool vDown = Input.GetButtonDown("Vertical");
+        bool hUp = Input.GetButtonUp("Horizontal");
+        bool vUp = Input.GetButtonUp("Vertical");
+        bool hMove = Input.GetButton("Horizontal");
+        bool vMove = Input.GetButton("Vertical");
+
+        // ëŒ€ê°ì„  ì´ë™ ë°©ì§€
+        if (hDown || vUp)
+        {
+            isHorizontalMove = true;
+        }
+        else if (vDown || hUp)
+        {
+            isHorizontalMove = false;
+        }
+
+        // ë°˜ëŒ€í‚¤ ëˆŒë €ì„ë•Œ ì¡°ì‘ê° ì™„í™”
+        else if (hMove)
+        {
+            if (vMove)
+            {
+                isHorizontalMove = false;
+                return;
+            }
+            isHorizontalMove = true;
+        }
+        else if (vMove)
+        {
+            if (hMove)
+            {
+                isHorizontalMove = true;
+                return;
+            }
+            isHorizontalMove = false;
+        }
+
+        // animation
+        if (anim.GetInteger("hAxisRaw") != h)
+        {
+            anim.SetBool("isChange", true);
+            anim.SetInteger("hAxisRaw", (int)h);
+        }
+        else if (anim.GetInteger("vAxisRaw") != v)
+        {
+            anim.SetBool("isChange", true);
+            anim.SetInteger("vAxisRaw", (int)v);
+        }
+        else
+        {
+            anim.SetBool("isChange", false);
+        }
+
+
+        // raycast ë°©í–¥
+        if (vDown && v == 1)
+        {
+            vecDir = Vector3.up;
+        }
+        else if (vDown && v == -1)
+        {
+            vecDir = Vector3.down;
+        }
+        else if (hDown && h == 1)
+        {
+            vecDir = Vector3.right;
+        }
+        else if (hDown && h == -1)
+        {
+            vecDir = Vector3.left;
+
+        }
+        
+        // game action êµ¬í˜„
+        if(Input.GetKeyDown(KeyCode.Space) && obj != null)
+        {
+            Debug.Log(obj.name);
+        }
     }
 
     void FixedUpdate()
     {
-        rb.velocity = new Vector2(h, v) * 5f;
+        // ì´ë™ ë°©í–¥ ì„¤ì • ë° ì´ë™ êµ¬í˜„
+        Vector2 moveDir;
+        if (isHorizontalMove)
+        {
+            moveDir = new Vector2(h, 0);
+        }
+        else
+        {
+            moveDir = new Vector2(0, v);
+        }
+            rb.velocity = moveDir * moveSpeed;
+
+        //raycast
+        Debug.DrawRay(rb.position, vecDir * 0.7f, Color.green);
+
+        // layerê°€ objectì¸ ì˜¤ë¸Œì íŠ¸ê°€ í”Œë ˆì´ì–´ì˜ ì•ì— ìˆëŠ”ì§€ í™•ì¸
+        RaycastHit2D rayhit = Physics2D.Raycast(rb.position, vecDir, 0.7f, LayerMask.GetMask("Object"));
+
+
+        if(rayhit.collider != null)
+        {   // ìˆìœ¼ë©´ ê·¸ ì˜¤ë¸Œì íŠ¸ë¥¼ objì— ì €ì¥
+            obj = rayhit.collider.gameObject;
+        } 
+        else
+        { // ì—†ìœ¼ë©´ objëŠ” null
+            obj = null;
+        }
     }
 }
