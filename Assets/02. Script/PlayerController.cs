@@ -20,62 +20,59 @@ public class PlayerController : MonoBehaviour
     {
         // get axis 방향키에따라 입력값이 -1, 0, 1로 받음
         // 쯔꾸르형 게임에선 대각선 이동이 안되도록 하기 위해서 수평과 수직 중 하나의 입력만 받도록 함
-        h = Input.GetAxisRaw("Horizontal");
-        v = Input.GetAxisRaw("Vertical");
+        // 대화창이 열려있을때에는 움직이지 못하게 하기
+        h = (GameManager.Instance.isAction) ? 0 : Input.GetAxisRaw("Horizontal");
+        v = (GameManager.Instance.isAction) ? 0 : Input.GetAxisRaw("Vertical");
 
         // 입력 상태
-        bool hDown = Input.GetButtonDown("Horizontal");
-        bool vDown = Input.GetButtonDown("Vertical");
-        bool hUp = Input.GetButtonUp("Horizontal");
-        bool vUp = Input.GetButtonUp("Vertical");
-        bool hMove = Input.GetButton("Horizontal");
-        bool vMove = Input.GetButton("Vertical");
+        // 대화창이 열려있을때에는 움직이지 못하게 하기
+        bool hDown = (GameManager.Instance.isAction) ? false : Input.GetButtonDown("Horizontal");
+        bool vDown = (GameManager.Instance.isAction) ? false : Input.GetButtonDown("Vertical");
+        bool hUp = (GameManager.Instance.isAction) ? false : Input.GetButtonUp("Horizontal");
+        bool vUp = (GameManager.Instance.isAction) ? false : Input.GetButtonUp("Vertical");
 
         // 대각선 이동 방지
-        if (hDown || vUp)
+        if (hDown)
         {
             isHorizontalMove = true;
         }
-        else if (vDown || hUp)
+        else if (vDown)
         {
             isHorizontalMove = false;
         }
-
-        // 반대키 눌렀을때 조작감 완화
-        else if (hMove)
+        else if (hUp || vUp)
         {
-            if (vMove)
-            {
-                isHorizontalMove = false;
-                return;
-            }
-            isHorizontalMove = true;
-        }
-        else if (vMove)
-        {
-            if (hMove)
-            {
-                isHorizontalMove = true;
-                return;
-            }
-            isHorizontalMove = false;
+            isHorizontalMove = h != 0;
         }
 
-        // animation
-        if (anim.GetInteger("hAxisRaw") != h)
+        // 최종 h, v 값 확정 (대각선 방지 및 우선순위 결정)
+        if (isHorizontalMove && h != 0) v = 0;
+        else if (!isHorizontalMove && v != 0) h = 0;
+
+        // 4. 애니메이션 파라미터 전달
+        // 현재 애니메이터가 들고 있는 값과 새로 입력된 값이 다를 때만 업데이트
+        int curH = anim.GetInteger("hAxisRaw");
+        int curV = anim.GetInteger("vAxisRaw");
+
+        // 실제 애니메이터에 꽂아줄 목표 값 계산
+        int targetH = isHorizontalMove ? (int)h : 0;
+        int targetV = !isHorizontalMove ? (int)v : 0;
+
+        if (curH != targetH || curV != targetV)
         {
+            // 1. 값이 변했으므로 isChange를 true로 켜서 트랜지션 유도
             anim.SetBool("isChange", true);
-            anim.SetInteger("hAxisRaw", (int)h);
-        }
-        else if (anim.GetInteger("vAxisRaw") != v)
-        {
-            anim.SetBool("isChange", true);
-            anim.SetInteger("vAxisRaw", (int)v);
+
+            // 2. 바뀐 방향 값 전달
+            anim.SetInteger("hAxisRaw", targetH);
+            anim.SetInteger("vAxisRaw", targetV);
         }
         else
         {
+            // 3. 값이 변하지 않은 상태(이미 걷는 중이거나 가만히 있는 중)라면 false
             anim.SetBool("isChange", false);
         }
+
 
 
         // raycast 방향
@@ -96,12 +93,14 @@ public class PlayerController : MonoBehaviour
             vecDir = Vector3.left;
 
         }
-        
+
         // game action 구현
-        if(Input.GetKeyDown(KeyCode.Space) && obj != null)
+        if (Input.GetKeyDown(KeyCode.Space) && obj != null)
         {
-            Debug.Log(obj.name);
+            GameManager.Instance.scanObject = obj;
+            GameManager.Instance.Action();
         }
+
     }
 
     void FixedUpdate()
@@ -116,7 +115,7 @@ public class PlayerController : MonoBehaviour
         {
             moveDir = new Vector2(0, v);
         }
-            rb.velocity = moveDir * moveSpeed;
+        rb.velocity = moveDir * moveSpeed;
 
         //raycast
         Debug.DrawRay(rb.position, vecDir * 0.7f, Color.green);
@@ -125,10 +124,10 @@ public class PlayerController : MonoBehaviour
         RaycastHit2D rayhit = Physics2D.Raycast(rb.position, vecDir, 0.7f, LayerMask.GetMask("Object"));
 
 
-        if(rayhit.collider != null)
+        if (rayhit.collider != null)
         {   // 있으면 그 오브젝트를 obj에 저장
             obj = rayhit.collider.gameObject;
-        } 
+        }
         else
         { // 없으면 obj는 null
             obj = null;
