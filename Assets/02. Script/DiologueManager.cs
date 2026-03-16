@@ -38,7 +38,7 @@ public Sprite GetPotrait(ObjectData objData, int talkIdx)
     // 3. 위 조건을 다 통과했을 때만 배열에 접근
     int spriteIdx = objData.talkSequence[talkIdx];
     
-    // 4. imgs 배열 범위도 체크해주면 더 완벽합니다.
+    // 4. imgs 배열 범위도 체크
     if (objData.imgs == null || spriteIdx >= objData.imgs.Length)
     {
         return null;
