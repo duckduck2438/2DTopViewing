@@ -129,21 +129,30 @@ public class PlayerController : MonoBehaviour
                 {
                     distancePlayerObj = obj.transform.position - transform.position;
 
-                    if (distancePlayerObj.x < 0)
+
+                    Vector2 rayDirection = -rayhit.normal;
+
+                    if (rayDirection.y == 0)
                     {
-                        distancePlayerObj += new Vector3(-offset, 0, 0);
+                        if (distancePlayerObj.x < 0)
+                        {
+                            distancePlayerObj += new Vector3(-offset, 0, 0);
+                        }
+                        else if (distancePlayerObj.x > 0)
+                        {
+                            distancePlayerObj += new Vector3(offset, 0, 0);
+                        }
                     }
-                    else if (distancePlayerObj.x > 0)
+                    else
                     {
-                        distancePlayerObj += new Vector3(offset, 0, 0);
-                    }
-                    else if (distancePlayerObj.y < 0)
-                    {
-                        distancePlayerObj += new Vector3(0, -offset, 0);
-                    }
-                    else if (distancePlayerObj.x > 0)
-                    {
-                        distancePlayerObj += new Vector3(0, offset, 0);
+                        if (distancePlayerObj.y < 0)
+                        {
+                            distancePlayerObj += new Vector3(0, -offset, 0);
+                        }
+                        else if (distancePlayerObj.y > 0)
+                        {
+                            distancePlayerObj += new Vector3(0, offset, 0);
+                        }
                     }
                     if (!isGrabbing)
                         Grab();
@@ -193,6 +202,8 @@ public class PlayerController : MonoBehaviour
     {
         isGrabbing = true;
         //anim 출력
+        anim.SetBool("isGrabbing", true);
+
         obj.transform.SetParent(this.transform);
 
         Rigidbody2D grabRb = obj.GetComponent<Rigidbody2D>();
@@ -211,6 +222,7 @@ public class PlayerController : MonoBehaviour
     void Drop()
     {
         isGrabbing = false;
+        anim.SetBool("isGrabbing", false);
         obj.transform.SetParent(null);
 
         Rigidbody2D grabRb = obj.GetComponent<Rigidbody2D>();
