@@ -8,9 +8,15 @@ public class PlayerController : MonoBehaviour
     float moveSpeed = 5f;
     Rigidbody2D rb;
     bool isHorizontalMove = false;
+    bool isGrabbing = false;
     public Animator anim;
     Vector3 vecDir;
     GameObject obj;
+    Vector3 distancePlayerObj;
+    float offset = 0.1f;
+    public float grabDelay;
+    float lastGrabTime;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -99,6 +105,67 @@ public class PlayerController : MonoBehaviour
         {
             GameManager.Instance.scanObject = obj;
             GameManager.Instance.Action();
+
+
+        }
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            GameManager.Instance.TogglePause();
+        }
+
+
+        // layer가 object인 오브젝트가 플레이어의 앞에 있는지 확인
+        RaycastHit2D rayhit = Physics2D.Raycast(rb.position, vecDir, 0.7f, LayerMask.GetMask("Object"));
+
+
+        if (rayhit.collider != null)
+        {   // 있으면 그 오브젝트를 obj에 저장
+            obj = rayhit.collider.gameObject;
+
+            if (rayhit.collider.CompareTag("Carried"))
+            {
+                if (Input.GetKeyDown(KeyCode.LeftShift) && Time.time >= lastGrabTime + grabDelay)
+                {
+                    distancePlayerObj = obj.transform.position - transform.position;
+
+                    if (distancePlayerObj.x < 0)
+                    {
+                        distancePlayerObj += new Vector3(-offset, 0, 0);
+                    }
+                    else if (distancePlayerObj.x > 0)
+                    {
+                        distancePlayerObj += new Vector3(offset, 0, 0);
+                    }
+                    else if (distancePlayerObj.y < 0)
+                    {
+                        distancePlayerObj += new Vector3(0, -offset, 0);
+                    }
+                    else if (distancePlayerObj.x > 0)
+                    {
+                        distancePlayerObj += new Vector3(0, offset, 0);
+                    }
+                    if (!isGrabbing)
+                        Grab();
+                    else
+                    {
+                        Drop();
+                    }
+                }
+
+            }
+
+        }
+        else
+        { // 없으면 obj는 null
+            obj = null;
+        }
+
+        if (isGrabbing && obj != null)
+        {
+            Vector3 transPos = transform.position + distancePlayerObj;
+
+            obj.transform.position = Vector3.Lerp(obj.transform.position, transPos, Time.deltaTime * 10f);
         }
 
     }
@@ -120,17 +187,41 @@ public class PlayerController : MonoBehaviour
         //raycast
         Debug.DrawRay(rb.position, vecDir * 0.7f, Color.green);
 
-        // layer가 object인 오브젝트가 플레이어의 앞에 있는지 확인
-        RaycastHit2D rayhit = Physics2D.Raycast(rb.position, vecDir, 0.7f, LayerMask.GetMask("Object"));
-
-
-        if (rayhit.collider != null)
-        {   // 있으면 그 오브젝트를 obj에 저장
-            obj = rayhit.collider.gameObject;
-        }
-        else
-        { // 없으면 obj는 null
-            obj = null;
-        }
     }
+
+    void Grab()
+    {
+        isGrabbing = true;
+        //anim 출력
+        obj.transform.SetParent(this.transform);
+
+        Rigidbody2D grabRb = obj.GetComponent<Rigidbody2D>();
+        if (grabRb != null)
+        {
+
+            grabRb.bodyType = RigidbodyType2D.Kinematic;
+            grabRb.velocity = Vector2.zero;
+        }
+
+        obj.transform.position = Vector2.MoveTowards(obj.transform.position, transform.position, 0.1f);
+
+    }
+
+
+    void Drop()
+    {
+        isGrabbing = false;
+        obj.transform.SetParent(null);
+
+        Rigidbody2D grabRb = obj.GetComponent<Rigidbody2D>();
+        if (grabRb != null)
+        {
+            grabRb.bodyType = RigidbodyType2D.Static;
+        }
+
+        obj = null;
+        lastGrabTime = Time.time;
+
+    }
+
 }

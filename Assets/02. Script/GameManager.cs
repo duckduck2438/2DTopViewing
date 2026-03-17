@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class GameManager : Singleton<GameManager>
@@ -15,6 +16,11 @@ public class GameManager : Singleton<GameManager>
     public Animator potraitAnim;
     public int talkIdx;
     public Sprite prevPotrait = null;
+    public GameObject pausePanel;
+    public GameObject quitPanel;
+    public GameObject checkPanel;
+    public GameObject firstButton;
+    public bool isPause = false;
 
     public void Action()
     {
@@ -22,10 +28,7 @@ public class GameManager : Singleton<GameManager>
         Talk(objData);
         //대화창 애니메이션 (실전에선 안쓸듯?)
         dialogueBox.SetBool("isShow", isAction);
-
     }
-
-
 
     public void Talk(ObjectData objData)
     {
@@ -36,15 +39,23 @@ public class GameManager : Singleton<GameManager>
             // 빈 string을 부름
             TextAnim.Instance.SetText("");
             return;
-            }
+        }
         talkData = DialogueManager.Instance.GetTalk(objData, talkIdx);
 
         // 2. 대사가 끝났는지(null인지) 먼저 확인합니다.
         if (talkData == null)
         {
-            isAction = false;
-            talkIdx = 0;
-            return;
+            if (objData.id == 100)
+            {
+                OpenCheckPanel();
+                return;
+            }
+            else
+            {
+                isAction = false;
+                talkIdx = 0;
+                return;
+            }
         }
 
         // 3. 대사가 존재할 때만 아래 로직을 실행합니다.
@@ -71,5 +82,71 @@ public class GameManager : Singleton<GameManager>
         TextAnim.Instance.SetText(talkData);
         isAction = true;
         talkIdx++;
+    }
+
+
+    // 메뉴 버튼 클릭 함수들
+    // gameManager 보다 다른 스크립트 만들어서 관리하는게 나을듯
+    public void TogglePause()
+    {
+        //isPause라는 변수 대신 pausePanel.activeSelf라는 변수도 사용가능
+        if (!isPause)
+        {
+            isPause = true;
+            pausePanel.SetActive(isPause);
+        }
+        else
+        {
+            isPause = false;
+            pausePanel.SetActive(isPause);
+        }
+    }
+
+    public void OpenQuit()
+    {
+        if (!quitPanel.activeSelf)
+        {
+            quitPanel.SetActive(true);
+        }
+    }
+
+    public void Quit()
+    {
+        Application.Quit();
+    }
+
+    public void CancelQuit()
+    {
+        if (quitPanel.activeSelf)
+        {
+            quitPanel.SetActive(false);
+        }
+    }
+
+    public void OpenSave()
+    {
+        //SAVE PANEL OPEN
+        Debug.Log("save panel open");
+    }
+
+    public void OpenCheckPanel()
+    {
+        checkPanel.SetActive(true);
+        EventSystem.current.SetSelectedGameObject(null);
+        EventSystem.current.SetSelectedGameObject(firstButton);
+        // 중요: 이번 프레임의 모든 입력을 리셋하여 
+        // 다음 버튼 클릭 판정이 스페이스바에 의해 즉시 발생하는 것을 방지
+        Input.ResetInputAxes();
+    }
+    public void CloseSave()
+    {
+        isAction = false;
+        talkIdx = 0;
+        dialogueBox.SetBool("isShow", isAction);
+        checkPanel.SetActive(false);
+
+        // 중요: 이번 프레임의 모든 입력을 리셋하여 
+        // 다음 버튼 클릭 판정이 스페이스바에 의해 즉시 발생하는 것을 방지
+        Input.ResetInputAxes();
     }
 }
