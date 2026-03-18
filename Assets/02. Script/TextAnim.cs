@@ -53,6 +53,7 @@ public class TextAnim : Singleton<TextAnim>
             return;
         }
         mainText.text += targetText[idx];
+        //여기에 채팅 나오는 사운드 넣으면 될듯?
         idx++;
         Invoke("Animating", interval);
     }

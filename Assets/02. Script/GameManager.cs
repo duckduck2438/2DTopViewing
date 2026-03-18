@@ -46,7 +46,7 @@ public class GameManager : Singleton<GameManager>
         if (talkData == null)
         {
             if (objData.id == 100)
-            {
+            {   //저장 obj면 저장 UI 호출
                 OpenCheckPanel();
                 return;
             }
@@ -132,6 +132,8 @@ public class GameManager : Singleton<GameManager>
     public void OpenCheckPanel()
     {
         checkPanel.SetActive(true);
+        //키보드로 버튼 선택 가능하게 만드는 함수
+        // inspector창에서 button - navigation을 automatic이여야만 사용가능
         EventSystem.current.SetSelectedGameObject(null);
         EventSystem.current.SetSelectedGameObject(firstButton);
         // 중요: 이번 프레임의 모든 입력을 리셋하여 

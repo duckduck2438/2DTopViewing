@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.MPE;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
@@ -13,9 +14,14 @@ public class PlayerController : MonoBehaviour
     Vector3 vecDir;
     GameObject obj;
     Vector3 distancePlayerObj;
-    float offset = 0.1f;
     public float grabDelay;
     float lastGrabTime;
+    RaycastHit2D rayhit;
+    RaycastHit2D prevRayHit = default;
+    Vector2 rayDirection;
+    public BoxCollider2D hitBox, objCol;
+    Vector2 prevSize, prevOffset;
+
 
     void Awake()
     {
@@ -103,59 +109,83 @@ public class PlayerController : MonoBehaviour
         // game action 구현
         if (Input.GetKeyDown(KeyCode.Space) && obj != null)
         {
-            GameManager.Instance.scanObject = obj;
-            GameManager.Instance.Action();
+            if (rayhit.collider.CompareTag("Structure"))
+            {
+                GameManager.Instance.scanObject = obj;
+                GameManager.Instance.Action();
+            }
+
+            else if (rayhit.collider.CompareTag("Movement"))
+            {
+                Move();
+            }
 
 
         }
-
+        // pause
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             GameManager.Instance.TogglePause();
         }
 
-
-        // layer가 object인 오브젝트가 플레이어의 앞에 있는지 확인
-        RaycastHit2D rayhit = Physics2D.Raycast(rb.position, vecDir, 0.7f, LayerMask.GetMask("Object"));
+        // grab 상태일때는 raycast의 시선이 고정되게
+        // grab 상태에서 시선이 고정되기 떄문에 rayhit도 고정시키기
+        if (isGrabbing)
+        {
+            rayhit = prevRayHit;
+        }
+        else
+        {
+            // layer가 object인 오브젝트가 플레이어의 앞에 있는지 확인
+            rayhit = Physics2D.Raycast(rb.position, vecDir, 0.7f, LayerMask.GetMask("Object"));
+        }
 
 
         if (rayhit.collider != null)
         {   // 있으면 그 오브젝트를 obj에 저장
             obj = rayhit.collider.gameObject;
 
+            //옮길 수 있는 obj인지 확인
             if (rayhit.collider.CompareTag("Carried"))
-            {
+            {   //grab key down && grab cooltime
                 if (Input.GetKeyDown(KeyCode.LeftShift) && Time.time >= lastGrabTime + grabDelay)
-                {
+                {   //player와 obj의 간격 계산
                     distancePlayerObj = obj.transform.position - transform.position;
 
-
-                    Vector2 rayDirection = -rayhit.normal;
+                    //보는 방향 감지 후 물체 위치 재정의
+                    rayDirection = -rayhit.normal;
 
                     if (rayDirection.y == 0)
-                    {
-                        if (distancePlayerObj.x < 0)
-                        {
-                            distancePlayerObj += new Vector3(-offset, 0, 0);
-                        }
-                        else if (distancePlayerObj.x > 0)
-                        {
-                            distancePlayerObj += new Vector3(offset, 0, 0);
-                        }
+                    {   //obj를 playser position 축에 맞추기
+                        distancePlayerObj = new Vector3(distancePlayerObj.x, 0, 0);
+
+                        // if (distancePlayerObj.x < 0)
+                        // {   //1. 초기 개발 당시 obj와 player collider conflict 방지를 위해 offset만큼 띄어줌
+                        //     //2. 지금은 obj의 collider를 제거한 후 player의 collider를 2배로 증가 하는 식으로 개발
+                        //     distancePlayerObj += new Vector3(-offset, 0, 0);
+                        // }
+                        // else if (distancePlayerObj.x > 0)
+                        // {
+                        //     distancePlayerObj += new Vector3(offset, 0, 0);
+                        // }
                     }
                     else
-                    {
-                        if (distancePlayerObj.y < 0)
-                        {
-                            distancePlayerObj += new Vector3(0, -offset, 0);
-                        }
-                        else if (distancePlayerObj.y > 0)
-                        {
-                            distancePlayerObj += new Vector3(0, offset, 0);
-                        }
+                    {   //playser position 축에 맞추기
+                        distancePlayerObj = new Vector3(0, distancePlayerObj.y, 0);
+
+                        // if (distancePlayerObj.y < 0)
+                        // {
+                        //     distancePlayerObj += new Vector3(0, -offset, 0);
+                        // }
+                        // else if (distancePlayerObj.y > 0)
+                        // {
+                        //     distancePlayerObj += new Vector3(0, offset, 0);
+                        // }
                     }
                     if (!isGrabbing)
                         Grab();
+
+
                     else
                     {
                         Drop();
@@ -164,14 +194,15 @@ public class PlayerController : MonoBehaviour
 
             }
 
+
         }
         else
-        { // 없으면 obj는 null
+        { // raycast에 물체가 없으면 obj는 null
             obj = null;
         }
 
         if (isGrabbing && obj != null)
-        {
+        {   //물체가 player 옆에 위치
             Vector3 transPos = transform.position + distancePlayerObj;
 
             obj.transform.position = Vector3.Lerp(obj.transform.position, transPos, Time.deltaTime * 10f);
@@ -193,47 +224,135 @@ public class PlayerController : MonoBehaviour
         }
         rb.velocity = moveDir * moveSpeed;
 
-        //raycast
-        Debug.DrawRay(rb.position, vecDir * 0.7f, Color.green);
+        //raycast debug
+        // Debug.DrawRay(rb.position, vecDir * 0.7f, Color.green);
 
     }
 
     void Grab()
     {
         isGrabbing = true;
+        prevRayHit = rayhit;
+
         //anim 출력
         anim.SetBool("isGrabbing", true);
 
+        //obj를 player에 상속
+        //grabobj를 쉽게 관리 하기 위함
         obj.transform.SetParent(this.transform);
 
+        //objcolider remove
+        objCol = obj.GetComponent<BoxCollider2D>();
+        objCol.enabled = false;
         Rigidbody2D grabRb = obj.GetComponent<Rigidbody2D>();
         if (grabRb != null)
         {
 
             grabRb.bodyType = RigidbodyType2D.Kinematic;
             grabRb.velocity = Vector2.zero;
+
         }
 
+
         obj.transform.position = Vector2.MoveTowards(obj.transform.position, transform.position, 0.1f);
+
+        //grab시 히트박스 재정의
+        ChangeHitBox();
 
     }
 
 
     void Drop()
     {
+        //값들 초기화
         isGrabbing = false;
+        prevRayHit = default;
         anim.SetBool("isGrabbing", false);
         obj.transform.SetParent(null);
 
+        //물체도 초기화
         Rigidbody2D grabRb = obj.GetComponent<Rigidbody2D>();
         if (grabRb != null)
         {
             grabRb.bodyType = RigidbodyType2D.Static;
         }
-
+        //값 초기화
+        InitHitBox();
+        objCol.enabled = true;
         obj = null;
+        objCol = null;
+        //grab cooltime calc
         lastGrabTime = Time.time;
 
     }
 
+    void ChangeHitBox()
+    {   //물건의 상하좌우를 판별 후 히트박스 재정의
+        //player의 히트박스를 크게하는 형식으로 개발
+        prevSize = hitBox.size;
+        prevOffset = hitBox.offset;
+        if (obj != null)
+        {
+            if (rayDirection.y == 0)
+            {
+                if (rayDirection.x > 0)
+                {
+                    hitBox.offset = new Vector2(0.5f, 0f);
+                }
+                else
+                {
+                    hitBox.offset = new Vector2(-0.5f, 0f);
+                }
+                hitBox.size = new Vector2(1.8f, 0.9f);
+            }
+            else
+            {
+                if (rayDirection.y > 0)
+                {
+                    hitBox.offset = new Vector2(0f, 0.5f);
+                }
+                else
+                {
+                    hitBox.offset = new Vector2(0f, -0.5f);
+                }
+                hitBox.size = new Vector2(0.9f, 1.8f);
+            }
+        }
+
+    }
+
+    void InitHitBox()
+    {   //player hitbox init
+        hitBox.offset = prevOffset;
+        hitBox.size = prevSize;
+    }
+
+    void Move()
+    {
+        rayDirection = -rayhit.normal;
+
+        MovementData objMovementData = obj.GetComponent<MovementData>();
+
+        float xOffset = objMovementData.hOffset;
+        float yOffset = objMovementData.vOffset;
+        Vector3 originPos = this.transform.position;
+        StartCoroutine(FadeManager.Instance.FadeOut(0.5f));
+        if (rayDirection == Vector2.up)
+        {
+            this.transform.position = new Vector3(originPos.x, originPos.y + yOffset, originPos.z);
+        }
+        else if (rayDirection == Vector2.down)
+        {
+            this.transform.position = new Vector3(originPos.x, originPos.y - yOffset, originPos.z);
+        }
+        else if (rayDirection == Vector2.left)
+        {
+            this.transform.position = new Vector3(originPos.x + xOffset, originPos.y, originPos.z);
+        }
+        else if (rayDirection == Vector2.down)
+        {
+            this.transform.position = new Vector3(originPos.x - xOffset, originPos.y, originPos.z);
+        }
+        StartCoroutine(FadeManager.Instance.FadeIn(0.5f));
+    }
 }

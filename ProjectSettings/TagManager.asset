@@ -5,6 +5,9 @@ TagManager:
   serializedVersion: 2
   tags:
   - Carried
+  - Movement
+  - Structure
+  - Switch
   layers:
   - Default
   - TransparentFX
