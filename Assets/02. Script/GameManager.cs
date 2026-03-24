@@ -9,13 +9,15 @@ using UnityEngine.UI;
 public class GameManager : Singleton<GameManager>
 {
     public TextMeshProUGUI mainText;
+    public TextMeshProUGUI nameText;
     public GameObject scanObject;
     public Animator dialogueBox;
     public bool isAction = false;
     public Image potrait;
     public Animator potraitAnim;
     public int talkIdx;
-    public Sprite prevPotrait = null;
+    public int prevPotrait;
+    public int currPotrait;
     public GameObject pausePanel;
     public GameObject quitPanel;
     public GameObject checkPanel;
@@ -32,6 +34,7 @@ public class GameManager : Singleton<GameManager>
 
     public void Talk(ObjectData objData)
     {
+        string nameData = "";
         string talkData = "";
         // 1. 대사 데이터를 먼저 가져옵니다.
         if (TextAnim.Instance.isAnim)
@@ -41,7 +44,12 @@ public class GameManager : Singleton<GameManager>
             return;
         }
         talkData = DialogueManager.Instance.GetTalk(objData, talkIdx);
+        nameData = DialogueManager.Instance.GetName(objData);
 
+        if (nameData != null)
+        {
+            nameText.text = nameData;
+        }
         // 2. 대사가 끝났는지(null인지) 먼저 확인합니다.
         if (talkData == null)
         {
@@ -65,12 +73,13 @@ public class GameManager : Singleton<GameManager>
         {
             // NPC일 때만 초상화 데이터를 가져오고 색상을 조절합니다.
             potrait.sprite = DialogueManager.Instance.GetPotrait(objData, talkIdx);
+            currPotrait = DialogueManager.Instance.GetCurrentSequenceNum(objData, talkIdx);
             potrait.color = new Color(1, 1, 1, 1);
-            if (prevPotrait != potrait.sprite || prevPotrait != null)
+            if (prevPotrait != currPotrait)
             {
                 // 초상화가 바뀔 때 애니메이션
                 potraitAnim.SetTrigger("doMove");
-                prevPotrait = potrait.sprite;
+                prevPotrait = currPotrait;
             }
         }
         else

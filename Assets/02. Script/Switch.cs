@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Switch : MonoBehaviour
+public class Switch : Singleton<Switch>
 {
     public bool isActive = false;
 
@@ -11,6 +11,7 @@ public class Switch : MonoBehaviour
         if (other.CompareTag("Carried"))
         {
             isActive = true;
+            Problem1.Instance.Correct();
             Debug.Log("true");
         }
     }

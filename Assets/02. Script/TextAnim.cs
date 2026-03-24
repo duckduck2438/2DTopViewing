@@ -9,7 +9,7 @@ public class TextAnim : Singleton<TextAnim>
     public int CPS;
     TextMeshProUGUI mainText;
     public GameObject endCursor;
-    String targetText;
+    string targetText;
     int idx;
     float interval;
     public bool isAnim;
@@ -61,5 +61,21 @@ public class TextAnim : Singleton<TextAnim>
     {
         isAnim = false;
         endCursor.SetActive(true);
+    }
+
+    public void StartTyping(string target)
+    {
+        if (mainText == null) 
+        mainText = GetComponent<TextMeshProUGUI>();
+
+        if(isAnim)
+        {
+            CancelInvoke();
+            isAnim = false;
+        }
+
+        targetText = target;
+        mainText.text = "";
+        AnimStart();
     }
 }

@@ -1,11 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEditor.MPE;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
     float h, v;
+    bool hDown, vDown, hUp, vUp;
     float moveSpeed = 5f;
     Rigidbody2D rb;
     bool isHorizontalMove = false;
@@ -33,15 +35,24 @@ public class PlayerController : MonoBehaviour
         // get axis 방향키에따라 입력값이 -1, 0, 1로 받음
         // 쯔꾸르형 게임에선 대각선 이동이 안되도록 하기 위해서 수평과 수직 중 하나의 입력만 받도록 함
         // 대화창이 열려있을때에는 움직이지 못하게 하기
-        h = (GameManager.Instance.isAction) ? 0 : Input.GetAxisRaw("Horizontal");
-        v = (GameManager.Instance.isAction) ? 0 : Input.GetAxisRaw("Vertical");
-
-        // 입력 상태
-        // 대화창이 열려있을때에는 움직이지 못하게 하기
-        bool hDown = (GameManager.Instance.isAction) ? false : Input.GetButtonDown("Horizontal");
-        bool vDown = (GameManager.Instance.isAction) ? false : Input.GetButtonDown("Vertical");
-        bool hUp = (GameManager.Instance.isAction) ? false : Input.GetButtonUp("Horizontal");
-        bool vUp = (GameManager.Instance.isAction) ? false : Input.GetButtonUp("Vertical");
+        if (GameManager.Instance.isAction || FadeManager.Instance.isFading || GameManager.Instance.isPause)
+        {
+            h = 0;
+            v = 0;
+            hDown = false;
+            vDown = false;
+            hUp = false;
+            vUp = false;
+        }
+        else
+        {
+            h = Input.GetAxisRaw("Horizontal");
+            v = Input.GetAxisRaw("Vertical");
+            hDown = Input.GetButtonDown("Horizontal");
+            vDown = Input.GetButtonDown("Vertical");
+            hUp = Input.GetButtonUp("Horizontal");
+            vUp = Input.GetButtonUp("Vertical");
+        }
 
         // 대각선 이동 방지
         if (hDown)
@@ -109,7 +120,7 @@ public class PlayerController : MonoBehaviour
         // game action 구현
         if (Input.GetKeyDown(KeyCode.Space) && obj != null)
         {
-            if (rayhit.collider.CompareTag("Structure"))
+            if (rayhit.collider.CompareTag("Structure") || rayhit.collider.CompareTag("Carried"))
             {
                 GameManager.Instance.scanObject = obj;
                 GameManager.Instance.Action();
@@ -117,7 +128,7 @@ public class PlayerController : MonoBehaviour
 
             else if (rayhit.collider.CompareTag("Movement"))
             {
-                Move();
+                StartCoroutine(Move());
             }
 
 
@@ -145,6 +156,7 @@ public class PlayerController : MonoBehaviour
         {   // 있으면 그 오브젝트를 obj에 저장
             obj = rayhit.collider.gameObject;
 
+            if (rayhit.collider.CompareTag("Switch")) return;
             //옮길 수 있는 obj인지 확인
             if (rayhit.collider.CompareTag("Carried"))
             {   //grab key down && grab cooltime
@@ -327,7 +339,7 @@ public class PlayerController : MonoBehaviour
         hitBox.size = prevSize;
     }
 
-    void Move()
+    IEnumerator Move()
     {
         rayDirection = -rayhit.normal;
 
@@ -336,7 +348,7 @@ public class PlayerController : MonoBehaviour
         float xOffset = objMovementData.hOffset;
         float yOffset = objMovementData.vOffset;
         Vector3 originPos = this.transform.position;
-        StartCoroutine(FadeManager.Instance.FadeOut(0.5f));
+        yield return StartCoroutine(FadeManager.Instance.FadeOut(0.5f));
         if (rayDirection == Vector2.up)
         {
             this.transform.position = new Vector3(originPos.x, originPos.y + yOffset, originPos.z);
@@ -353,6 +365,6 @@ public class PlayerController : MonoBehaviour
         {
             this.transform.position = new Vector3(originPos.x - xOffset, originPos.y, originPos.z);
         }
-        StartCoroutine(FadeManager.Instance.FadeIn(0.5f));
+        yield return StartCoroutine(FadeManager.Instance.FadeIn(0.5f));
     }
 }
