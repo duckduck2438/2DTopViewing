@@ -19,6 +19,7 @@ public class DialogueManager : Singleton<DialogueManager>
     {
         public List<Dialogue> dialogues;
     }
+    //              objid, dialogue
     private Dictionary<int, Dialogue> dialogueDict = new Dictionary<int, Dialogue>();
 
     void Awake()
@@ -42,7 +43,7 @@ public class DialogueManager : Singleton<DialogueManager>
     }
 
     public string GetTalk(ObjectData objdata, int talkIdx)
-    {
+    {   //talkIdx 는 밖에서 증가
         if (!dialogueDict.ContainsKey(objdata.id)) return null;
 
         if (talkIdx < dialogueDict[objdata.id].sentences.Length)

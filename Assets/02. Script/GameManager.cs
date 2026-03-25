@@ -14,7 +14,9 @@ public class GameManager : Singleton<GameManager>
     public Animator dialogueBox;
     public bool isAction = false;
     public Image potrait;
+    public GameObject potraitObj;
     public Animator potraitAnim;
+
     public int talkIdx;
     public int prevPotrait;
     public int currPotrait;
@@ -71,6 +73,10 @@ public class GameManager : Singleton<GameManager>
 
         if (isNpc)
         {
+            if (potraitObj != null)
+            {
+                potraitObj.SetActive(true);
+            }
             // NPC일 때만 초상화 데이터를 가져오고 색상을 조절합니다.
             potrait.sprite = DialogueManager.Instance.GetPotrait(objData, talkIdx);
             currPotrait = DialogueManager.Instance.GetCurrentSequenceNum(objData, talkIdx);
@@ -113,6 +119,7 @@ public class GameManager : Singleton<GameManager>
 
     public void OpenQuit()
     {
+        //이거 작동 안됨 고쳐야 함
         if (!quitPanel.activeSelf)
         {
             quitPanel.SetActive(true);
